@@ -61,40 +61,6 @@ void GetSvrIPAddress(uint32_t* dst)
     pclose(fp);
 }
 
-//void GetFakeIPAddress(uint32_t* dst)
-//{
-//    char my_ip[20];
-//    {
-//        FILE* fp = popen("hostname -I", "r");
-
-//        if( !fgets(my_ip, 20, fp) )
-//            printf("IP assigning error!\n");
-
-//        pclose(fp);
-//    }
-
-//    int last_dot_loc = 0;
-//    for(int i = 0; my_ip[i] != 0; i++) {
-//        if( my_ip[i] == '.' )
-//            last_dot_loc = i;
-//    }
-//    my_ip[last_dot_loc+1] = 0;
-
-//    for(int i = 0; i < 0xFF; i++)
-//    {
-//        FILE* fp;
-//        char command[100] = {0, };
-
-//        // ping 1 times
-//        strcat(command, "ping ");
-//        strcat(command, ip);
-//        strcat(command, " -c 1");
-
-//        fp = popen(command, "r");
-//        pclose(fp);
-//    }
-//}
-
 int is_ip_packet(const uint8_t* packet)
 {
     // Input: A packet which we want to check if the packet is arp or not
@@ -204,6 +170,8 @@ void send_infection_packet(pcap_t* handle, const uint8_t* packet, arp_packet* ar
 
     get_target_mac_from_arp_table(target_mac, packet, address_table, session_size);
     if( !strlen((char*)target_mac) ) return;  // continue if the sender was not in our table
+
+    printf("Hello!\n");
 
     int i = get_session_location(target_mac, address_table, session_size);
     for(int cnt = 0; cnt < 3; cnt++) // send packet three times
