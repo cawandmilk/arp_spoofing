@@ -6,7 +6,7 @@
 #include <arpa/inet.h>
 #include <net/if.h>
 #include <pcap.h>
-#include <pthread.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
