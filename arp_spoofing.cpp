@@ -28,10 +28,10 @@ void get_svr_mac_address(uint8_t* dst)
     {
         for(int i = 0; i < MAC_SIZE; i++)
         {
-            hostMAC_str[3*i] += (hostMAC_str[3*i] >= 'a' && hostMAC_str[3*i] <= 'f' ? 'A'-'a' : 0);
+            hostMAC_str[3*i  ] += (hostMAC_str[3*i  ] >= 'a' && hostMAC_str[3*i  ] <= 'f' ? 'A'-'a' : 0);
             hostMAC_str[3*i+1] += (hostMAC_str[3*i+1] >= 'a' && hostMAC_str[3*i+1] <= 'f' ? 'A'-'a' : 0);
 
-            dst[i] += hostMAC_str[3*i] >= 'A' ? hostMAC_str[3*i] - 'A' + 10 : hostMAC_str[3*i] - '0';
+            dst[i] += hostMAC_str[3*i  ] >= 'A' ? hostMAC_str[3*i  ] - 'A' + 10 : hostMAC_str[3*i  ] - '0';
             dst[i] *= 16;
             dst[i] += hostMAC_str[3*i+1] >= 'A' ? hostMAC_str[3*i+1] - 'A' + 10 : hostMAC_str[3*i+1] - '0';
         }
