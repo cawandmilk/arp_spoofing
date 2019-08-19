@@ -11,9 +11,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <time.h>
 #include <unistd.h>
 
 #include "./include/libnet/libnet-macros.h"
@@ -22,7 +19,7 @@
 #define MAC_SIZE 6
 #define IP_SIZE 4
 
-#pragma pack(push, 1) // struture padding terminate
+#pragma pack(push, 1) // terminate struture padding
 typedef struct addr_pair
 {
     uint8_t  sdr_mac[MAC_SIZE];
@@ -40,19 +37,17 @@ typedef struct arp_packet {
 
 void usage();
 void Print(const uint8_t* packet, size_t size);
-void GetSvrMACAddress(uint8_t* dst);
-void GetSvrIPAddress(uint32_t* dst);
+void get_svr_mac_address(uint8_t* dst);    //GetSvrMACAddress
+void get_svr_ip_address(uint32_t* dst);    //GetSvrIPAddress
 
-int is_ip_packet(const uint8_t* packet);
 int is_broadcasting_packet(const uint8_t* packet);
+int is_ip_packet(const uint8_t* packet);
 
+void get_mac_from_ip(uint8_t* dst_mac, const char* ip);
 int  get_session_location(uint8_t* target_mac, addr_pair* address_table, int session_size);
 void get_target_mac_from_arp_table(uint8_t* dst, const uint8_t* packet, addr_pair* address_table, int table_size);
-void get_mac_from_ip(uint8_t* dst_mac, const char* ip);
 
-void set_relay_packet(const uint8_t* packet, uint8_t* target_mac, uint8_t* my_mac);
-
-void send_infection_packet(pcap_t* handle, const uint8_t* packet, arp_packet* arp_lists, addr_pair* address_table, int session_size);
-void send_relay_packet(pcap_t* handle, const uint8_t* packet, addr_pair* address_table, int session_size, int packet_size);
+void  set_relay_packet(const uint8_t* packet, uint8_t* target_mac, uint8_t* my_mac);
+void send_relay_packet(pcap_t* handle, const uint8_t* packet, addr_pair* address_table, int session_size, uint32_t packet_size);
 
 #endif // ARP_SPOOFING_H

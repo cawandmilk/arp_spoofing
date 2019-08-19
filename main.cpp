@@ -51,8 +51,8 @@ int main(int argc, char* argv[])
     arp_packet* infected_arp_list = (arp_packet*)calloc(session_size, sizeof(arp_packet));
     arp_packet* restored_arp_list = (arp_packet*)calloc(session_size, sizeof(arp_packet));
 
-    uint8_t my_mac[MAC_SIZE] = {0, };   GetSvrMACAddress(my_mac);
-    uint32_t my_ip = 0;                 GetSvrIPAddress(&my_ip);
+    uint8_t my_mac[MAC_SIZE] = {0, };   get_svr_mac_address(my_mac);
+    uint32_t my_ip = 0;                 get_svr_ip_address(&my_ip);
 
     for(int i = 0; i < session_size; i++)
     {
@@ -120,6 +120,8 @@ int main(int argc, char* argv[])
     /// Send all infected packets 3 times
     /////////////////////////////////////////////////////////////////////////////
 
+    printf("Sending restored packets...\n\n");
+
     for(int count = 0; count < 3; count++)
     {
         for(int i = 0; i < session_size; i++)
@@ -177,6 +179,8 @@ int main(int argc, char* argv[])
     /////////////////////////////////////////////////////////////////////////////
     /// Send all restored packets 3 times
     /////////////////////////////////////////////////////////////////////////////
+
+    printf("Sending restored packets...\n\n");
 
     for(int count = 0; count < 3; count++)
     {
