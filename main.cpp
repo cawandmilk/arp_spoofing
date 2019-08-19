@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
 
 
     /////////////////////////////////////////////////////////////////////////////
-    /// Make address table such (sender mac, sender ip, target mac, target ip)
+    /// Make address table as (sender mac, sender ip, target mac, target ip)
     /////////////////////////////////////////////////////////////////////////////
 
     const int session_size = (argc - 2) / 2;
@@ -128,7 +128,7 @@ int main(int argc, char* argv[])
         {
             if( pcap_sendpacket(handle, (const uint8_t*)&infected_arp_list[i], sizeof(arp_packet)) )
             {
-                printf("infected arp packet sending failed\n");
+                fprintf(stderr, "infected arp packet sending failed\n");
                 return -1;
             }
         }
@@ -148,7 +148,7 @@ int main(int argc, char* argv[])
     while(true)
     {
         // loop until sigint interrupt(ctrl+c) occured
-        if (sigpending(&pendingset) == 0 && sigismember(&pendingset, SIGINT)) break;
+        if( !sigpending(&pendingset) && sigismember(&pendingset, SIGINT) ) break;
 
         struct pcap_pkthdr* header;
         const uint8_t* packet;
@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
             {
                 if( pcap_sendpacket(handle, (const uint8_t*)&infected_arp_list[i], sizeof(arp_packet)) )
                 {
-                    printf("infected arp packet sending failed\n");
+                    fprintf(stderr, "infected arp packet sending failed\n");
                     return -1;
                 }
             }
@@ -187,7 +187,7 @@ int main(int argc, char* argv[])
         for(int i = 0; i < session_size; i++)
         {
             if( pcap_sendpacket(handle, (const uint8_t*)&restored_arp_list[i], sizeof(arp_packet)) ) {
-                printf("restored arp packet sending failed\n");
+                fprintf(stderr, "restored arp packet sending failed\n");
                 return -1;
             }
         }
