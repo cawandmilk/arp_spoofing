@@ -43,6 +43,7 @@ int main(int argc, char* argv[])
         address_table[i].tgt_ip = inet_addr(argv[2*(i+1)+1]);
     }
 
+
     /////////////////////////////////////////////////////////////////////////////
     /// Make all infection packets and restored packets
     /////////////////////////////////////////////////////////////////////////////
@@ -168,7 +169,6 @@ int main(int argc, char* argv[])
         }
         else if( is_ip_packet(packet) )
         {
-            printf("ip packet captured\n");
             send_relay_packet(handle, packet, address_table, session_size, header->caplen);
         }
     }   
@@ -189,6 +189,7 @@ int main(int argc, char* argv[])
         }
         sleep(1);   // make some terms before send packets
     }
+
 
     /////////////////////////////////////////////////////////////////////////////
     /// Close and return

